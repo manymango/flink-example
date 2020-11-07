@@ -51,7 +51,8 @@ import java.util.Objects;
 public class CEPJob {
 
 	/**
-     * 运行nc -L -p 9999 ，打开端口
+     * 运行nc -L -p 9999 ，打开端口  win
+	 * nc -lk 9999     mac
 	 */
 	public static void main(String[] args) throws Exception {
 		// set up the streaming execution environment
@@ -64,11 +65,6 @@ public class CEPJob {
 					public boolean filter(String value) throws Exception {
 						return "xixi".equals(value) || "haha".equals(value);
 					}
-				}).next("middle").subtype(String.class).where(new SimpleCondition<String>() {
-					@Override
-					public boolean filter(String value) throws Exception {
-						return "xixi".equals(value);
-					}
 				}).followedBy("end").where(new SimpleCondition<String>() {
 					@Override
 					public boolean filter(String value) throws Exception {
@@ -79,7 +75,6 @@ public class CEPJob {
 		PatternStream<String> patternStream = CEP.pattern(dataStreamSource, pattern);
 
 		DataStream<String> result = patternStream.process(new PatternProcessFunction<String, String>() {
-
 			@Override
 			public void processMatch(Map<String, List<String>> match, Context ctx, Collector<String> out) throws Exception {
 				System.out.println(match);
@@ -88,6 +83,15 @@ public class CEPJob {
 		});
 
 		result.print();
+
+
+//		result.filter(Objects::nonNull)
+//				.map(s -> new Tuple2(s , 1))
+//				.returns(Types.TUPLE(Types.STRING, Types.INT))
+//				.keyBy(0)
+//				.timeWindow(Time.seconds(3))
+//				.sum(1)
+//				.print();
 
 
 		env.execute("Flink Streaming Java API Skeleton");
