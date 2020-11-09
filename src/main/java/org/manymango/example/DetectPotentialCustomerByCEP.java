@@ -104,12 +104,14 @@ public class DetectPotentialCustomerByCEP {
 				.timesOrMore(1)
 				.within(Time.minutes(3));
 
+		// CEP用pattern将输入的时间事件流转化为复杂事件流
 		PatternStream<Event> patternStreamA = CEP.pattern(partitionedInput, patternA);
 		PatternStream<Event> patternStreamB = CEP.pattern(partitionedInput, patternB);
 
 		DataStream<String> streamA = processPatternStream(patternStreamA, "收藏商品");
 		DataStream<String> streamB = processPatternStream(patternStreamB, "连续浏览商品");
 
+		// 最后两个复杂事件流进行合并
 		streamA.union(streamB)
 				.print();
 
