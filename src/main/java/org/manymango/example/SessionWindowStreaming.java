@@ -19,11 +19,21 @@
 package org.manymango.example;
 
 import org.apache.flink.api.java.DataSet;
+import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
+import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
+import org.apache.flink.streaming.api.functions.windowing.WindowFunction;
+import org.apache.flink.streaming.api.windowing.assigners.EventTimeSessionWindows;
+import org.apache.flink.streaming.api.windowing.time.Time;
+import org.apache.flink.streaming.api.windowing.triggers.EventTimeTrigger;
+import org.apache.flink.streaming.api.windowing.triggers.Trigger;
+import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
+import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
+import org.manymango.example.component.MyWatermark;
 import org.manymango.example.model.Event;
 
 import java.util.Objects;
@@ -40,7 +50,7 @@ import java.util.Objects;
  * <p>If you change the name of the main class (with the public static void main(String[] args))
  * method, change the respective entry in the POM.xml file (simply search for 'mainClass').
  */
-public class BroadcastStreaming {
+public class SessionWindowStreaming {
 
 	/**
 	 * 运行nc -L -p 9999 ，打开端口
@@ -48,6 +58,7 @@ public class BroadcastStreaming {
 	public static void main(String[] args) throws Exception {
 		// set up the streaming execution environment
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
 		DataStreamSource<String> dataStreamSource = env.socketTextStream("localhost", 9999, "\n");
 
@@ -61,21 +72,23 @@ public class BroadcastStreaming {
 					Event event = new Event();
 					event.setName(strings[0]);
 					event.setType(Integer.parseInt(strings[1]));
+					event.setTimestamp(System.currentTimeMillis());
 					return event;
 				}).returns(Event.class);
 
-		input.process(new ProcessFunction<Event, Event>() {
-			@Override
-			public void processElement(Event value, Context ctx, Collector<Event> out) throws Exception {
+		input.print();
 
-
-			}
-		});
-
-
-
-
-		DataSet<String> dataSet = null;
+		input.assignTimestampsAndWatermarks(new MyWatermark())
+				.keyBy(Event::getName)
+				.window(EventTimeSessionWindows.withGap(Time.seconds(3)))
+				.process(new ProcessWindowFunction<Event, Object, String, TimeWindow>() {
+					@Override
+					public void process(String s, Context context, Iterable<Event> elements, Collector<Object> out) throws Exception {
+						System.out.println(elements);
+						out.collect("HAHA");
+					}
+				}).setParallelism(1)
+				.print();
 
 		env.execute("Flink Streaming Java API Skeleton");
 	}
