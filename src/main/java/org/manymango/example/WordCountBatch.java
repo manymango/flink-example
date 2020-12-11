@@ -19,11 +19,16 @@
 package org.manymango.example;
 
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.operators.DataSource;
+import org.apache.flink.api.java.tuple.Tuple;
+import org.apache.flink.api.java.tuple.Tuple0;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.GenericTypeInfo;
+import org.apache.flink.api.scala.DataSet;
+import org.apache.flink.util.Collector;
 
 /**
  * Skeleton for a Flink Batch Job.
@@ -49,11 +54,19 @@ public class WordCountBatch {
 				out.collect(str);
 			}
 		}).returns(new GenericTypeInfo<>(String.class))
-				.map(s -> new Tuple2(s , 1))
+				.map(s -> {
+					Object a = new Tuple2(s , 1);
+					return a;
+				})
+				.returns(Object.class)
+				.map(s -> (Tuple2)s)
 				.returns(Types.TUPLE(Types.STRING, Types.INT))
 				.groupBy(0)
 				.sum(1)
 				.print();
+
+		DataSet<String> dataSet = null;
+		dataSet.groupBy(null);
 
 		env.execute("Flink Batch Java API Skeleton");
 	}
